@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Sharing vs Auto Route</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        #map-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            max-width: 800px;
+            border: 1px solid #ccc;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #map {
+            width: 100%;
+            height: 400px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .info-box {
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            background: #ffffff;
+            color: #333;
+            position: relative;
+        }
+
+        .info-box h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .info-box p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .switch-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            color: #555;
+            text-align: center;
+        }
+
+        .switch-button.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .switch-button span {
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 20px;
+        }
+
+        .route-text {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .route-info {
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .divider {
+            border-top: 1px solid #ccc;
+            margin: 15px 0;
+        }
+
+        /* Graues Auto-Icon für die Inaktivität */
+        .fa-car {
+            color: gray;
+        }
+
+        /* Blaues Auto-Icon, wenn der Button aktiv ist */
+        .switch-button.active .fa-car {
+            color: #007bff;
+        }
+
+        /* Graues Fahrrad-Icon für die Inaktivität */
+        .fa-bicycle {
+            color: gray;
+        }
+
+        /* Blaues Fahrrad-Icon, wenn der Button aktiv ist */
+        .switch-button.active .fa-bicycle {
+            color: #007bff;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #map {
+                height: 300px;
+            }
+        }
+
+        .custom-tooltip {
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            background: none;
+            border: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="info-box">
+            <div class="button-group">
+                <button id="car-route" class="switch-button active">
+                    <span><i class="fa-solid fa-car"></i></span> 18 min
+                </button>
+                <button id="bike-route" class="switch-button">
+                    <span><i class="fa-solid fa-person-biking"></i></span> 18 min
+                </button>
+            </div>
+            <div id="info-text">
+                <h2 id="route-title">Mit dem Auto</h2>
+                <div class="divider"></div>
+                <p class="route-info">18 min (5,2 km)</p>
+                <p class="route-text" id="additional-info"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([52.506761, 13.375804], 13); // Center on Berlin
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            maxZoom: 18,
+            attribution: false
+        }).addTo(map);
+
+        // Define routes
+        var carRoute = [
+            [52.5036, 13.3589],
+            [52.5045, 13.3608],
+            [52.5058, 13.3635],
+            [52.5063, 13.366],
+            [52.508, 13.369],
+            [52.5098, 13.371],
+            [52.5151, 13.3807],
+            [52.5208, 13.4044],
+            [52.5214, 13.4114]
+        ];
+
+        var bikeRoute = [
+            [52.5036, 13.3589],
+            [52.504, 13.360],
+            [52.505, 13.362],
+            [52.506, 13.365],
+            [52.510, 13.370],
+            [52.512, 13.374],
+            [52.518, 13.400],
+            [52.5214, 13.4114]
+        ];
+
+        var carPolyline = L.polyline(carRoute, { color: 'blue', weight: 4 });
+        var bikePolyline = L.polyline(bikeRoute, { color: 'blue', weight: 4 });
+
+        // Markers
+        L.circleMarker([52.5036, 13.3589], { 
+            radius: 8, 
+            color: 'black', 
+            fillColor: 'white', 
+            fillOpacity: 1 
+        }).bindTooltip("Hotel", { 
+            permanent: true, 
+            direction: "top", // Position der Beschriftung oberhalb des Punktes
+            className: "custom-tooltip" // Optional: CSS-Klasse für Styling
+        }).addTo(map);
+
+        L.circleMarker([52.5214, 13.4114], { 
+            radius: 8, 
+            color: 'red', 
+            fillColor: 'red', 
+            fillOpacity: 1 
+        }).bindTooltip("Sehenswürdigkeit", { 
+            permanent: true, 
+            direction: "top", // Position der Beschriftung oberhalb des Punktes
+            className: "custom-tooltip" // Optional: CSS-Klasse für Styling
+        }).addTo(map);
+
+        // Display car route by default
+        carPolyline.addTo(map);
+
+        // Handle button clicks
+        document.getElementById('car-route').addEventListener('click', function () {
+            map.removeLayer(bikePolyline);
+            carPolyline.addTo(map);
+            document.getElementById('car-route').classList.add('active');
+            document.getElementById('bike-route').classList.remove('active');
+            document.getElementById('route-title').textContent = "Mit dem Auto";
+            document.getElementById('additional-info').innerHTML = '';
+        });
+
+        document.getElementById('bike-route').addEventListener('click', function () {
+            map.removeLayer(carPolyline);
+            bikePolyline.addTo(map);
+            document.getElementById('bike-route').classList.add('active');
+            document.getElementById('car-route').classList.remove('active');
+            document.getElementById('route-title').textContent = "Mit Bike-Sharing";
+            document.getElementById('additional-info').innerHTML = "Wenn Sie das Bike-Sharing Angebot auf dieser Strecke nutzen, tun Sie Ihrer Gesundheit etwas Gutes.";
+        });
+    </script>
+</body>
+</html>
