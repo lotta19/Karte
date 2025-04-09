@@ -157,6 +157,20 @@
             box-shadow: none;
         }
 
+        /* Spezifisch für Sehenswürdigkeit */
+        .leaflet-tooltip.custom-tooltip.sehenswuerdigkeit {
+            /* Standardmäßig rechts – keine Verschiebung */
+            transform: none;
+        }
+
+        /* Auf kleinen Bildschirmen Tooltip höher setzen */
+        @media (max-width: 768px) {
+            .leaflet-tooltip.custom-tooltip.sehenswuerdigkeit {
+                transform: translateY(-32px); /* Tooltip höher setzen auf Mobilgeräten */
+            }
+        }
+
+
         .text-large {
             font-size: 24px;  /* Größeren Text */
             font-weight: bold;  /* Fetter Text */
