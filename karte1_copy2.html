@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vergleich von Mobilitätsoptionen</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+        }
+
+        #map-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;  /* Ensures content stays at the top */
+            margin: 0 auto;
+            max-width: 100%;
+            height: 95vh; /* Gesamtcontainer ist maximal 90% der Höhe des Bildschirms */
+            max-height: 650px; /* Setzt eine maximale Höhe für den gesamten Container */
+            overflow: hidden; /* Verhindert Scrollen im Container */
+            border: 1px solid #ccc;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #map {
+            width: 100%;
+            height: 55vh; /* Karte nimmt 55% der Bildschirmhöhe ein */
+            max-height: 400px;
+            min-height: 250px;
+        }
+
+        .info-box {
+            width: 100%;
+            padding: 10px 15px; /* Weniger Padding für Mobilgeräte */
+            border-top: 1px solid #ccc;
+            box-sizing: border-box;
+            flex-grow: 0; /* Verhindert das Wachsen der Box über den Container hinaus */
+            max-height: 40vh; /* Begrenze die Höhe der Info-Box */
+            overflow-y: auto; /* Falls doch mehr Text rein soll */
+            text-align: center;
+            background: #ffffff;
+            color: #333;
+            position: relative;
+        }
+
+        .info-box h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .info-box p {
+            margin: 10px 0 0 0;
+            font-size: 18px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .switch-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            color: #555;
+            text-align: center;
+        }
+
+        .switch-button.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .switch-button span {
+            display: inline-block;
+            margin-right: 5px;
+            font-size: 20px;
+        }
+       
+        #route-title {
+            font-size: 18px;  /* Vergrößert die Schrift */
+            font-weight: bold;  /* Macht den Text fett */
+            text-align: center;  /* Zentriert den Text */
+            margin-bottom: 10px;  /* Fügt Abstand nach unten hinzu */
+        }
+
+        .route-text {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .route-info {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Graues Auto-Icon für die Inaktivität */
+        .fa-car {
+            color: gray;
+        }
+
+        /* Blaues Auto-Icon, wenn der Button aktiv ist */
+        .switch-button.active .fa-car {
+            color: #007bff;
+        }
+
+        /* Graues Fahrrad-Icon für die Inaktivität */
+        .fa-bicycle {
+            color: gray;
+        }
+
+        /* Blaues Fahrrad-Icon, wenn der Button aktiv ist */
+        .switch-button.active .fa-bicycle {
+            color: #007bff;
+        }
+        
+        /* Graues Bus-Icon für die Inaktivität */
+        .fa-bus {
+            color: gray;
+        }
+
+        /* Blaues Bus-Icon, wenn der Button aktiv ist */
+        .switch-button.active .fa-bus {
+            color: #007bff;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #map {
+                width: 100%;
+                height: 55vh; /* Karte nimmt 55% der Bildschirmhöhe ein */
+                max-height: 400px;
+            }
+        }
+
+        .custom-tooltip {
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            background: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Spezifisch für Sehenswürdigkeit */
+        .leaflet-tooltip.custom-tooltip.sehenswuerdigkeit {
+            /* Standardmäßig rechts – keine Verschiebung */
+            transform: none;
+        }
+
+        /* Auf kleinen Bildschirmen Tooltip höher setzen */
+        @media (max-width: 768px) {
+            .leaflet-tooltip.custom-tooltip.sehenswuerdigkeit {
+                transform: translateY(-48px); /* Tooltip höher setzen auf Mobilgeräten */
+            }
+        }
+
+        .text-large {
+            font-size: 24px;  /* Größeren Text */
+            font-weight: bold;  /* Fetter Text */
+            margin-bottom: 10px;  /* Abstand zwischen Titel und Buttons */
+            text-align: center;  /* Zentriert den Text */
+        }
+
+        /* Tooltip-Pfeile ausblenden */
+        .leaflet-tooltip.custom-tooltip::before {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="info-box">
+            <!-- Route Title: Mit dem Auto / Mit Bike-Sharing -->
+            <p class="text-large" id="route-title">Mit dem Auto</p>
+            
+            <!-- Button Group -->
+            <div class="button-group">
+                <button id="car-route" class="switch-button active">
+                    <span><i class="fa-solid fa-car"></i></span> 18 min
+                </button>
+                <button id="bike-route" class="switch-button">
+                    <span><i class="fa-solid fa-person-biking"></i></span> 18 min
+                </button>
+                <button id="bus-route" class="switch-button">
+                    <span><i class="fa-solid fa-bus-simple"></i></span> 18 min
+                </button>
+            </div>
+            
+            <!-- Additional Route Info (under the buttons) -->
+            <div id="info-text">
+                <div class="divider"></div>
+                <p class="route-info">18 min (5,2 km)</p>
+                <p class="route-text" id="additional-info"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        // Dynamischer Zoom je nach Gerätegröße
+        var initialZoom = window.innerWidth <= 768 ? 12.5 : 13.5;
+        // Initialize map
+        var map = L.map('map', {
+            center: [52.5115, 13.385], // Mittelpunkt der Karte
+            zoom: initialZoom,         // Dynamischer Zoom
+            zoomSnap: 0.5,              // Schrittweite für Zoom auf 0.5 einstellen
+            attributionControl: false  // Entfernt das Leaflet-Wasserzeichen
+        });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            maxZoom: 18,
+            attribution: false
+        }).addTo(map);
+
+        // Disable map interactions
+        map.dragging.disable();
+        map.scrollWheelZoom.disable();
+        map.doubleClickZoom.disable();
+        map.touchZoom.disable();
+        map.boxZoom.disable();
+        map.keyboard.disable();
+
+        // Define routes
+        var carRoute = [
+            [52.5041, 13.3598],
+            [52.5031, 13.3656],
+            [52.5060, 13.3684],
+            [52.5085, 13.3698],
+            [52.5091, 13.3708],
+            [52.5094, 13.3766],
+            [52.5106, 13.3926],
+            [52.5113, 13.4014],
+            [52.5139, 13.4058],
+            [52.5170, 13.4088],
+            [52.5201, 13.4048],
+            [52.5222, 13.4093],
+            [52.5216, 13.4107]
+        ];
+
+        var bikeRoute = [
+            [52.5042, 13.3597],
+            [52.5031, 13.3656],
+            [52.5058, 13.3681],
+            [52.5085, 13.3697],
+            [52.5091, 13.3709],
+            [52.5095, 13.3766],
+            [52.5108, 13.3767],
+            [52.5130, 13.3772],
+            [52.5143, 13.3836],
+            [52.5145, 13.3847],
+            [52.5153, 13.3970],
+            [52.5158, 13.3997],
+            [52.5162, 13.4008],
+            [52.5159, 13.4013],
+            [52.5184, 13.4072],
+            [52.5198, 13.4101],
+            [52.5207, 13.4118],
+            [52.5214, 13.4114]
+        ];
+
+        var busRoute = [
+            [52.5041, 13.3598],
+            [52.5031, 13.3656],
+            [52.5060, 13.3684],
+            [52.5085, 13.3698],
+            [52.5091, 13.3708],
+            [52.5094, 13.3766],
+            [52.5106, 13.3926],
+            [52.5113, 13.4014],
+            [52.5139, 13.4058],
+            [52.5170, 13.4088],
+            [52.5201, 13.4048],
+            [52.5222, 13.4093],
+            [52.5216, 13.4107]
+        ];
+
+        var carPolyline = L.polyline(carRoute, { color: 'blue', weight: 4 });
+        var bikePolyline = L.polyline(bikeRoute, { color: 'blue', weight: 4 });
+        var busPolyline = L.polyline(busRoute, { color: 'blue', weight: 4 });
+
+        // Markers
+        L.circleMarker([52.5036, 13.3589], { 
+            radius: 8, 
+            color: 'black', 
+            fillColor: 'white', 
+            fillOpacity: 1 
+        }).bindTooltip("Hotel", { 
+            permanent: true, 
+            direction: "left", // Position der Beschriftung oberhalb des Punktes
+            className: "custom-tooltip" // Optional: CSS-Klasse für Styling
+        }).addTo(map);
+
+        // Roter Pin für den Endpunkt (Sehenswürdigkeit) mit Font Awesome Icon
+        var redPin = L.divIcon({
+            className: 'fa-icon',  // Benutzerdefinierte Klasse für das Icon
+            html: '<i class="fa-solid fa-location-dot" style="color: red; font-size: 32px;"></i>',  // Font Awesome Icon in Rot
+            iconSize: [24, 24],  // Größe des Icons
+            iconAnchor: [16, 32],  // Ankerpunkt des Icons (wo es den Punkt trifft)
+            popupAnchor: [0, -32]  // Position des Popups
+        });
+
+        // Tooltip-Ausrichtung je nach Gerätegröße
+        var tooltipDirection = window.innerWidth <= 768 ? "top" : "right";
+
+        L.marker([52.5214, 13.4114], { icon: redPin })
+            .bindTooltip("Sehenswürdigkeit", { 
+                permanent: true, 
+                direction: tooltipDirection, 
+                className: "custom-tooltip sehenswuerdigkeit"
+            })
+            .addTo(map);
+
+
+        // Display car route by default
+        carPolyline.addTo(map);
+
+         // Set default values for the route and text
+        document.getElementById('route-title').textContent = "Mit dem Auto";
+        document.getElementById('additional-info').innerHTML = "Die angegebene Route ist bei üblicher Verkehrslage die kürzeste und vermeidet eine Straßensperrung.";
+
+        // Handle button clicks
+        document.getElementById('car-route').addEventListener('click', function () {
+            map.removeLayer(bikePolyline);
+            map.removeLayer(busPolyline);
+            carPolyline.addTo(map);
+            document.getElementById('car-route').classList.add('active');
+            document.getElementById('bike-route').classList.remove('active');
+            document.getElementById('bus-route').classList.remove('active');
+            document.getElementById('route-title').textContent = "Mit dem Auto";
+            document.getElementById('additional-info').innerHTML = "Die angegebene Route ist bei üblicher Verkehrslage die kürzeste und vermeidet eine Straßensperrung.";
+        });
+
+        document.getElementById('bike-route').addEventListener('click', function () {
+            map.removeLayer(carPolyline);
+            map.removeLayer(busPolyline);
+            bikePolyline.addTo(map);
+            document.getElementById('bike-route').classList.add('active');
+            document.getElementById('car-route').classList.remove('active');
+            document.getElementById('bus-route').classList.remove('active');
+            document.getElementById('route-title').textContent = "Mit Bike-Sharing";
+            document.getElementById('additional-info').innerHTML = "Wird das Bike-Sharing-Angebot auf dieser Strecke genutzt, werden zwei zusätzliche Sehenswürdigkeiten passiert.";
+        });
+        
+        document.getElementById('bus-route').addEventListener('click', function () {
+            map.removeLayer(carPolyline);
+            map.removeLayer(bikePolyline);
+            busPolyline.addTo(map);
+            document.getElementById('bus-route').classList.add('active');
+            document.getElementById('car-route').classList.remove('active');
+            document.getElementById('bike-route').classList.remove('active');
+            document.getElementById('route-title').textContent = "Mit dem Bus";
+            document.getElementById('additional-info').innerHTML = "Mit der Linie 106 wird die Zielstation erreicht. Je nach Verkehrsaufkommen kann es zu Änderungen im Fahrplan kommen.";
+        }); 
+    </script>
+</body>
+</html>
