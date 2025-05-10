@@ -138,13 +138,18 @@
         .switch-button.active .fa-bus {
             color: #007bff;
         }
+        
+        /* Tooltip-Pfeile ausblenden */
+        .leaflet-tooltip.custom-tooltip::before {
+            display: none !important;
+        }
+
+        .custom-tooltip.leaflet-tooltip-top {
+            transform: translateY(-40px) !important;
+        }
 
         /* Responsive Design */
         @media (max-width: 768px) {
-
-            .custom-tooltip.leaflet-tooltip-top {
-                transform: translateY(-60px);
-            }
 
             .info-box {
                 max-height: none !important;
@@ -172,11 +177,6 @@
             font-weight: bold;  /* Fetter Text */
             margin-bottom: 10px;  /* Abstand zwischen Titel und Buttons */
             text-align: center;  /* Zentriert den Text */
-        }
-
-        /* Tooltip-Pfeile ausblenden */
-        .leaflet-tooltip.custom-tooltip::before {
-            display: none !important;
         }
 
     </style>
